@@ -5,12 +5,14 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.ts",
+    "debug": "nodemon --exec \"node --inspect-wait --nolazy --enable-source-maps -r ts-node/register index.ts\"",
     "lint": "npx eslint .",
     "lint: fix": "npx eslint . --fix",
     "lint-staged": "npx lint-staged",
     "prettier": "npx prettier . --check",
     "prettier: fix": "npx prettier . --write"
   },
+  "nodemonConfgi": {},
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -19,6 +21,7 @@
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "express-ws": "^5.0.2",
     "mongoose": "^8.10.0",
     "multer": "^1.4.5-lts.1"
   },
@@ -27,6 +30,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/express-ws": "^3.0.5",
     "@types/mongoose": "^5.11.96",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.13.1",
