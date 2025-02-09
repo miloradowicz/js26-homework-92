@@ -6,7 +6,6 @@ import config from './config';
 import auth from './middleware/auth';
 import users from './routers/users';
 import chat, { mount } from './routers/chat';
-import permit from './middleware/permit';
 
 const app = express();
 expressWs(app);

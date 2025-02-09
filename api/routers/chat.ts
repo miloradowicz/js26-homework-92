@@ -133,6 +133,8 @@ export const mount = () => {
     });
 
     ws.on('close', async () => {
+      delete connections[String(user._id)];
+
       notify({
         type: 'USER_DISCONNECTED',
         payload: String(user._id),

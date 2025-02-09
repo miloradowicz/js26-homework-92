@@ -20,7 +20,7 @@ interface Methods {
   generateToken(): void;
 }
 
-type Model = mongoose.Model<Fields, void, Methods>;
+type Model = mongoose.Model<Fields, object, Methods>;
 
 const schema = new mongoose.Schema<HydratedDocument<Fields>, Model, Methods>(
   {
