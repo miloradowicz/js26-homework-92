@@ -4,13 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "seed": "ts-node fixtures.ts",
     "dev": "nodemon index.ts",
-    "debug": "nodemon --exec \"node --inspect-wait --nolazy --enable-source-maps -r ts-node/register index.ts\"",
+    "dev:debug": "nodemon --exec \"NODE_OPTIONS=\"--inspect-wait\" ts-node index.ts\"",
     "lint": "npx eslint .",
-    "lint: fix": "npx eslint . --fix",
+    "lint:fix": "npx eslint . --fix",
     "lint-staged": "npx lint-staged",
     "prettier": "npx prettier . --check",
-    "prettier: fix": "npx prettier . --write"
+    "prettier:fix": "npx prettier . --write"
   },
   "nodemonConfgi": {},
   "keywords": [],
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@faker-js/faker": "^9.4.0",
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
