@@ -64,7 +64,7 @@ router.post('/sessions', async (req, res, next) => {
   }
 });
 
-router.delete('/sessions', permit('user', 'moderator'), async (_req, res) => {
+router.delete('/sessions', permit('member', 'moderator'), async (_req, res) => {
   const req = _req as RequestWithUser;
 
   assert(req.user);

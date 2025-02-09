@@ -9,7 +9,6 @@ export interface Fields {
   username: string;
   password: string;
   displayName: string;
-  googleId: string | null;
   avatarUrl: string | null;
   role: string;
   token: string | null;
@@ -21,7 +20,7 @@ interface Methods {
   generateToken(): void;
 }
 
-type Model = mongoose.Model<Fields, object, Methods>;
+type Model = mongoose.Model<Fields, void, Methods>;
 
 const schema = new mongoose.Schema<HydratedDocument<Fields>, Model, Methods>(
   {
@@ -44,19 +43,15 @@ const schema = new mongoose.Schema<HydratedDocument<Fields>, Model, Methods>(
       type: String,
       required: [true, 'Display name is required'],
     },
-    googleId: {
-      type: String,
-      default: null,
-    },
     avatarUrl: {
       type: String,
       default: null,
     },
     role: {
       type: String,
-      enum: ['user', 'moderator'],
+      enum: ['member', 'moderator'],
       required: [true, 'Role is required'],
-      default: 'user',
+      default: 'member',
     },
     token: {
       type: String,

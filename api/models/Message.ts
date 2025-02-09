@@ -1,7 +1,14 @@
 import mongoose from 'mongoose';
 import User from './User';
 
-const schema = new mongoose.Schema(
+export interface Fields {
+  _id: mongoose.Types.ObjectId;
+  sender: mongoose.Types.ObjectId;
+  recepient?: mongoose.Types.ObjectId;
+  message: string;
+}
+
+const schema = new mongoose.Schema<Fields>(
   {
     sender: {
       type: mongoose.Schema.Types.ObjectId,
@@ -12,10 +19,11 @@ const schema = new mongoose.Schema(
       },
     },
     recepient: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
       default: null,
       validate: {
-        validator: async (value: mongoose.Types.ObjectId) => !!(await User.findById(value)),
+        validator: async (value: mongoose.Types.ObjectId) =>
+          value === null || value === undefined || !!(await User.findById(value)),
         message: 'User not found',
       },
     },
@@ -30,4 +38,4 @@ const schema = new mongoose.Schema(
   },
 );
 
-export default mongoose.model('User', schema);
+export default mongoose.model('Message', schema);
