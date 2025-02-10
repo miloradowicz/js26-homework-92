@@ -6,9 +6,11 @@ import { blue } from '@mui/material/colors';
 
 interface Props {
   users: UserInfo[];
+  selectedUser: UserInfo | null;
+  onItemClick: (_: UserInfo) => void;
 }
 
-const UserList: FC<Props> = ({ users }) => {
+const UserList: FC<Props> = ({ users, selectedUser, onItemClick: handleClick }) => {
   return (
     <Box
       sx={{
@@ -23,12 +25,12 @@ const UserList: FC<Props> = ({ users }) => {
         sx={{
           display: 'flex',
           gap: 1,
-          sm: { flexDirection: 'row', justifyContent: 'stretch' },
-          md: { flexDirection: 'column', alignItems: 'stretch' },
+          flexDirection: 'column',
+          justifyContent: 'stretch',
         }}
       >
         {users.map((x) => (
-          <UserListItem key={x._id} user={x} />
+          <UserListItem key={x._id} user={x} selected={x._id === selectedUser?._id} onClick={() => handleClick(x)} />
         ))}
       </List>
     </Box>

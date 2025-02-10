@@ -1,13 +1,15 @@
 import { TextField, InputAdornment, IconButton, Box } from '@mui/material';
 import { blue } from '@mui/material/colors';
 import { Send } from '@mui/icons-material';
-import { ChangeEventHandler, FC, useState } from 'react';
+import { ChangeEventHandler, FC, useCallback, useState } from 'react';
+import { UserInfo } from '@/types';
 
 interface Props {
+  recepient: UserInfo | null;
   onSend: (_: string) => Promise<void>;
 }
 
-const MessageForm: FC<Props> = ({ onSend }) => {
+const MessageForm: FC<Props> = ({ recepient, onSend }) => {
   const [message, setMessage] = useState<string>('');
   const [error, setError] = useState<string | null>();
   const [sending, setSending] = useState(false);
@@ -17,7 +19,7 @@ const MessageForm: FC<Props> = ({ onSend }) => {
     setMessage(e.target.value);
   };
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     try {
       setSending(true);
 
@@ -29,7 +31,7 @@ const MessageForm: FC<Props> = ({ onSend }) => {
     } finally {
       setSending(false);
     }
-  };
+  }, [message, onSend]);
 
   return (
     <Box sx={{ flex: 1, overflowY: 'auto', padding: 2, bgcolor: blue[100], borderRadius: 4 }}>
@@ -37,7 +39,9 @@ const MessageForm: FC<Props> = ({ onSend }) => {
         <TextField
           fullWidth
           variant='outlined'
-          placeholder='Strat typing here...'
+          placeholder={
+            !recepient ? 'Написать всем' : `Сказать на ушко ${recepient.displayName} (${recepient.username})`
+          }
           value={message}
           onChange={handleChange}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}

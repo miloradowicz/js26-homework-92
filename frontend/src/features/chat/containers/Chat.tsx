@@ -1,4 +1,4 @@
-import { Grid2 as Grid } from '@mui/material';
+import { Grid2 as Grid, Typography } from '@mui/material';
 import UserList from '../components/UserList';
 import MessageList from '../components/MessageList';
 import MessageForm from '../components/MessageForm';
@@ -17,6 +17,7 @@ import {
 import { useAppSelector } from '@/app/hooks';
 import { selectUser } from '@/features/users/usersSlice';
 import Loader from '@/components/UI/Loader/Loader';
+import { grey } from '@mui/material/colors';
 
 const Chat = () => {
   const user = useAppSelector(selectUser);
@@ -24,21 +25,22 @@ const Chat = () => {
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [messages, setMessages] = useState<PopulatedMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recepient, setRecepient] = useState<UserInfo | null>(null);
 
-  const ws = useRef<WebSocket | null>(null);
+  const [ws, setWs] = useState<WebSocket | null>(null);
 
   const { enqueueSnackbar } = useSnackbar();
 
   const connect = useCallback(() => {
-    ws.current = new WebSocket(wsURL);
+    const ws = new WebSocket(wsURL);
 
-    ws.current.onopen = function () {
+    ws.onopen = function () {
       enqueueSnackbar('Connection established', { variant: 'success' });
 
       this.send(JSON.stringify({ type: 'AUTHORIZATION', payload: user?.token } as Outbound));
     };
 
-    ws.current.onmessage = (e) => {
+    ws.onmessage = (e) => {
       try {
         const inbound = JSON.parse(e.data);
 
@@ -70,51 +72,94 @@ const Chat = () => {
       }
     };
 
-    ws.current.onclose = (e) => {
+    ws.onclose = (e) => {
       if (e.code === 1002 || e.code === 1006 || e.code === 1008) {
         enqueueSnackbar('Connection lost, trying to reconnect...', { variant: 'error' });
 
         setTimeout(connect, 5000);
       }
     };
+
+    setWs(ws);
   }, [enqueueSnackbar]);
 
   useEffect(() => {
     connect();
 
     return () => {
-      if (ws.current) {
-        ws.current.close();
+      if (ws) {
+        ws.close();
       }
     };
   }, [connect]);
 
-  const handleSend = async (message: string) => {
-    if (ws.current) {
-      ws.current.send(JSON.stringify({ type: 'CREATE_MESSAGE', payload: { message } } as Outbound));
-    }
-  };
+  const handleSend = useCallback(
+    async (message: string) => {
+      if (ws) {
+        ws.send(
+          JSON.stringify({
+            type: 'CREATE_MESSAGE',
+            payload: { recepient: recepient?._id ?? null, message },
+          } as Outbound),
+        );
+      }
+    },
+    [ws],
+  );
 
-  const handleItemDelete = async (id: string) => {
-    if (ws.current) {
-      ws.current.send(JSON.stringify({ type: 'DELETE_MESSAGE', payload: id } as Outbound));
-    }
-  };
+  const handleItemDelete = useCallback(
+    async (id: string) => {
+      if (ws) {
+        ws.send(JSON.stringify({ type: 'DELETE_MESSAGE', payload: id } as Outbound));
+      }
+    },
+    [ws],
+  );
+
+  const handleItemClick = useCallback(
+    async (u: UserInfo) => {
+      if (u._id === user?._id) {
+        setRecepient(null);
+      } else if (u._id === recepient?._id) {
+        setRecepient((recepient) => (!recepient ? u : null));
+      } else {
+        setRecepient(u);
+      }
+    },
+    [recepient],
+  );
 
   return (
     <>
       <Loader open={loading} />
       <Grid container spacing={1}>
         <Grid size={{ sm: 12, md: 4 }}>
-          <UserList users={users} />
+          <Typography component='h3' variant='h5' px={2}>
+            Подлюченные пользователи:
+          </Typography>
+          <Typography variant='caption' fontStyle='italic' px={2}>
+            Нажмите на пользователя, чтобы прошептать
+          </Typography>
+          <UserList users={users} selectedUser={recepient} onItemClick={handleItemClick} />
         </Grid>
         <Grid size={{ sm: 12, md: 8 }}>
           <Grid container direction='column' spacing={1}>
+            <Typography component='h3' variant='h5' px={2}>
+              Сообщения:
+            </Typography>
             <Grid>
               <MessageList messages={messages} onItemDelete={handleItemDelete} />
             </Grid>
             <Grid>
-              <MessageForm onSend={handleSend} />
+              <Typography component='h3' variant='h6' px={2}>
+                Новое сообщение:
+              </Typography>
+              {recepient && (
+                <Typography variant='caption' sx={{ color: grey[500] }} fontStyle='italic'>
+                  шепотом @{`${recepient.displayName} (${recepient.username})`}
+                </Typography>
+              )}
+              <MessageForm recepient={recepient} onSend={handleSend} />
             </Grid>
           </Grid>
         </Grid>

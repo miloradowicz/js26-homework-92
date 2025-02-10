@@ -53,7 +53,7 @@ const UserMenu: FC<Props> = ({ user }) => {
         {user.displayName}
       </Button>
       <Menu anchorEl={ref.current} open={open} onClose={() => setOpen(false)}>
-        <MenuItem onClick={handleClick}>Logout</MenuItem>
+        <MenuItem onClick={handleClick}>Выйти</MenuItem>
       </Menu>
     </>
   );

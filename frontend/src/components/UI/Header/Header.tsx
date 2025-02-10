@@ -12,17 +12,17 @@ const Header = () => {
     <AppBar position='static'>
       <Toolbar component='nav' sx={{ display: 'flex', justifyContent: 'space-between' }}>
         <Typography variant='h6' component={Link} color='white' sx={{ textDecoration: 'none' }} to='/'>
-          WebSocket Chat 1.0
+          Веб-сокет чат 1.0
         </Typography>
         {user ? (
           <UserMenu user={user} />
         ) : (
           <Box display='flex' gap={1}>
             <Button component={Link} variant='contained' color='info' to='/login'>
-              Sign In
+              Войти
             </Button>
             <Button component={Link} variant='contained' color='info' to='/register'>
-              Sign Up
+              Зарегистрироваться
             </Button>
           </Box>
         )}
