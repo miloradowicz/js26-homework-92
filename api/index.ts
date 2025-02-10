@@ -14,9 +14,8 @@ mount();
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
-app.use(auth);
 
-app.use('/users', users);
+app.use('/users', auth, users);
 app.use('/chat', chat);
 
 (async () => {

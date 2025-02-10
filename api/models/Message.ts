@@ -12,6 +12,7 @@ const schema = new mongoose.Schema<Fields>(
   {
     sender: {
       type: mongoose.Schema.Types.ObjectId,
+      ref: User,
       required: [true, 'Sender is required'],
       validate: {
         validator: async (value: mongoose.Types.ObjectId) => !!(await User.findById(value)),
@@ -20,6 +21,7 @@ const schema = new mongoose.Schema<Fields>(
     },
     recepient: {
       type: mongoose.Schema.Types.ObjectId,
+      ref: User,
       default: null,
       validate: {
         validator: async (value: mongoose.Types.ObjectId) =>
