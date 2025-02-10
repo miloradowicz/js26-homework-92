@@ -1,7 +1,7 @@
 import { baseURL } from '@/constants';
 import { UserInfo } from '@/types';
 import { stringToColor } from '@/utils/helpers';
-import { ListItem, ListItemAvatar, Avatar, ListItemText, Paper, ListItemButton, Checkbox } from '@mui/material';
+import { ListItem, ListItemAvatar, Avatar, ListItemText, Paper, ListItemButton } from '@mui/material';
 import { blue, green } from '@mui/material/colors';
 import { FC } from 'react';
 

@@ -11,6 +11,7 @@ export const isTypedError = (e: any): e is TypedError =>
   typeof Object.keys(e.errors) === 'string' &&
   typeof Object.values(e.errors) === 'string';
 
+export const hasError = (e: any): e is { error: string } => typeof e.error === 'string';
 export const hasMessage = (e: any): e is { message: string } => typeof e.message === 'string';
 
 export const isConnectionEstablished = (

@@ -5,11 +5,12 @@ import { useSnackbar } from 'notistack';
 import { Box, Button, Container, Grid2 as Grid, Link, TextField, Typography } from '@mui/material';
 import { AddAPhoto } from '@mui/icons-material';
 
-import { GenericError, TypedError } from '../../../types';
+import { TypedError } from '../../../types';
 import { useAppDispatch, useAppSelector } from '../../../app/hooks';
 import { selectLoading, selectError, clearError } from '../usersSlice';
-import { loginWithGoogle, register } from '../usersThunk';
+import { register } from '../usersThunk';
 import FileInput from '../../../components/UI/FileInput/FileInput';
+import { hasError, hasMessage, isTypedError } from '@/utils/classifiers';
 
 interface FormData {
   username: string;
@@ -63,13 +64,11 @@ const SignUp = () => {
       await dispatch(register({ ...data, avatar: data.avatar !== '' ? data.avatar : null })).unwrap();
       navigate('/');
     } catch (e) {
-      if (!(e as TypedError).errors && (e as GenericError).error) {
-        enqueueSnackbar((e as GenericError).error, { variant: 'error' });
+      if (!isTypedError(e) && hasError(e)) {
+        enqueueSnackbar(e.error, { variant: 'error' });
       } else if (isAxiosError(e) && e.response?.data.error) {
         return void enqueueSnackbar(`${e.message}: ${e.response.data.error}`, { variant: 'error' });
-      } else if (e instanceof Error) {
-        return void enqueueSnackbar(e.message, { variant: 'error' });
-      } else if (((e): e is { message: string } => 'message' in (e as { message: string }))(e)) {
+      } else if (hasMessage(e)) {
         return void enqueueSnackbar(e.message, { variant: 'error' });
       }
 

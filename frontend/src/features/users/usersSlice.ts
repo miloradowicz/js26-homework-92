@@ -1,13 +1,13 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-import { AuthenticationError, GenericError, User, ValidationError } from '../../types';
+import { TypedError, User } from '../../types';
 import { RootState } from '../../app/store';
-import { login, register, logout, loginWithGoogle } from './usersThunk';
+import { login, register, logout } from './usersThunk';
 
 interface State {
   user: User | null;
   loading: boolean;
-  error: GenericError | AuthenticationError | ValidationError | null;
+  error: TypedError | null;
 }
 
 const initialState: State = {
@@ -21,7 +21,7 @@ const slice = createSlice({
   initialState,
   reducers: {
     clearError: (state, { payload }: PayloadAction<string>) => {
-      const _error = state.error as AuthenticationError | ValidationError;
+      const _error = state.error as TypedError;
       if (_error?.errors[payload]) {
         delete _error.errors[payload];
       }
@@ -37,9 +37,9 @@ const slice = createSlice({
         state.loading = false;
         state.user = payload.user;
       })
-      .addCase(login.rejected, (state, { payload, error }) => {
+      .addCase(login.rejected, (state, { payload }) => {
         state.loading = false;
-        state.error = payload ?? { error: error.message ?? 'Unknown error' };
+        state.error = payload ?? null;
       })
       .addCase(register.pending, (state) => {
         state.loading = true;
@@ -49,9 +49,9 @@ const slice = createSlice({
         state.loading = false;
         state.user = payload;
       })
-      .addCase(register.rejected, (state, { payload, error }) => {
+      .addCase(register.rejected, (state, { payload }) => {
         state.loading = false;
-        state.error = payload ?? { error: error.message ?? 'Unknown error' };
+        state.error = payload ?? null;
       })
       .addCase(logout.pending, (state) => {
         state.error = null;
@@ -59,21 +59,9 @@ const slice = createSlice({
       .addCase(logout.fulfilled, (state, { payload }) => {
         state.user = payload.user;
       })
-      .addCase(logout.rejected, (state, { error }) => {
+      .addCase(logout.rejected, (state) => {
         state.user = null;
-        state.error = { error: error.message ?? 'Unknown error' };
-      })
-      .addCase(loginWithGoogle.pending, (state) => {
-        state.loading = true;
         state.error = null;
-      })
-      .addCase(loginWithGoogle.fulfilled, (state, { payload }) => {
-        state.loading = false;
-        state.user = payload.user;
-      })
-      .addCase(loginWithGoogle.rejected, (state, { payload, error }) => {
-        state.loading = false;
-        state.error = payload ?? { error: error.message ?? 'Unknown error' };
       });
   },
 });

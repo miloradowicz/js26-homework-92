@@ -24,7 +24,7 @@ const MessageForm: FC<Props> = ({ recepient, onSend }) => {
       setSending(true);
 
       if (!message) {
-        return void setError('Message cannot be empty');
+        return void setError('Сообщение не должно быть пустым');
       }
 
       await onSend(message);

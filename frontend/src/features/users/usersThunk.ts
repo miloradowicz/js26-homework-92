@@ -1,18 +1,10 @@
 import { isAxiosError } from 'axios';
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
-import {
-  AuthenticationError,
-  Session,
-  User,
-  SignInMutation,
-  SignUpMutation,
-  ValidationError,
-  GenericError,
-} from '../../types';
+import { TypedError, Session, User, SignInMutation, SignUpMutation } from '../../types';
 import { api } from '../../api';
 
-export const login = createAsyncThunk<Session, SignInMutation, { rejectValue: AuthenticationError }>(
+export const login = createAsyncThunk<Session, SignInMutation, { rejectValue: TypedError }>(
   'users/login',
   async (mutation, { rejectWithValue }) => {
     try {
@@ -29,7 +21,7 @@ export const login = createAsyncThunk<Session, SignInMutation, { rejectValue: Au
   },
 );
 
-export const register = createAsyncThunk<User, SignUpMutation, { rejectValue: ValidationError }>(
+export const register = createAsyncThunk<User, SignUpMutation, { rejectValue: TypedError }>(
   'users/register',
   async (mutation, { rejectWithValue }) => {
     try {
@@ -59,19 +51,3 @@ export const logout = createAsyncThunk('users/logout', async () => {
 
   return data;
 });
-
-export const loginWithGoogle = createAsyncThunk<Session, string, { rejectValue: GenericError }>(
-  'users/loginWithGoogle',
-  async (credential, { rejectWithValue }) => {
-    try {
-      const { data } = await api.post<Session>('users/google', { credential });
-      return data;
-    } catch (e) {
-      if (isAxiosError(e) && e.response && e.response.status === 400) {
-        return rejectWithValue(e.response.data);
-      }
-
-      throw e;
-    }
-  },
-);

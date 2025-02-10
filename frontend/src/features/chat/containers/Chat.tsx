@@ -4,7 +4,7 @@ import MessageList from '../components/MessageList';
 import MessageForm from '../components/MessageForm';
 import { Outbound, PopulatedMessage, UserInfo } from '@/types';
 import { wsURL } from '@/constants';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSnackbar } from 'notistack';
 import {
   isConnectionEstablished,
@@ -24,7 +24,7 @@ const Chat = () => {
 
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [messages, setMessages] = useState<PopulatedMessage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [recepient, setRecepient] = useState<UserInfo | null>(null);
 
   const [ws, setWs] = useState<WebSocket | null>(null);
@@ -35,8 +35,6 @@ const Chat = () => {
     const ws = new WebSocket(wsURL);
 
     ws.onopen = function () {
-      enqueueSnackbar('Connection established', { variant: 'success' });
-
       this.send(JSON.stringify({ type: 'AUTHORIZATION', payload: user?.token } as Outbound));
     };
 
@@ -49,6 +47,7 @@ const Chat = () => {
         }
 
         if (isConnectionEstablished(inbound)) {
+          enqueueSnackbar('Подключение установлено', { variant: 'success' });
           setUsers(inbound.payload.users);
           setMessages(inbound.payload.messages);
           setLoading(false);
@@ -61,7 +60,7 @@ const Chat = () => {
         } else if (isUserDisconnected(inbound)) {
           setUsers((users) => users.filter((x) => x._id !== inbound.payload));
         } else {
-          throw new Error('Response not recognized');
+          throw new Error('Нераспознанный ответ от сервера');
         }
       } catch (e) {
         if (e instanceof Error) {
@@ -74,14 +73,15 @@ const Chat = () => {
 
     ws.onclose = (e) => {
       if (e.code === 1002 || e.code === 1006 || e.code === 1008) {
-        enqueueSnackbar('Connection lost, trying to reconnect...', { variant: 'error' });
+        setLoading(true);
+        enqueueSnackbar('Подключение прервано, переподключаем...', { variant: 'error' });
 
         setTimeout(connect, 5000);
       }
     };
 
     setWs(ws);
-  }, [enqueueSnackbar]);
+  }, [enqueueSnackbar, user]);
 
   useEffect(() => {
     connect();
@@ -91,7 +91,7 @@ const Chat = () => {
         ws.close();
       }
     };
-  }, [connect]);
+  }, [connect, ws]);
 
   const handleSend = useCallback(
     async (message: string) => {
@@ -104,7 +104,7 @@ const Chat = () => {
         );
       }
     },
-    [ws],
+    [ws, recepient],
   );
 
   const handleItemDelete = useCallback(
@@ -126,7 +126,7 @@ const Chat = () => {
         setRecepient(u);
       }
     },
-    [recepient],
+    [recepient, user],
   );
 
   return (
@@ -138,7 +138,7 @@ const Chat = () => {
             Подлюченные пользователи:
           </Typography>
           <Typography variant='caption' fontStyle='italic' px={2}>
-            Нажмите на пользователя, чтобы прошептать
+            Нажмите на пользователя, чтобы сказать на ушко
           </Typography>
           <UserList users={users} selectedUser={recepient} onItemClick={handleItemClick} />
         </Grid>

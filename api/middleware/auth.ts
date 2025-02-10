@@ -7,7 +7,7 @@ export interface RequestWithUser<T = core.ParamsDictionary> extends Request<T> {
   user: UserFields | null;
 }
 
-const auth = async (_req: Request, res: Response, next: NextFunction) => {
+const auth = async (_req: Request, _: Response, next: NextFunction) => {
   const req = _req as RequestWithUser;
   const token = req.get('Authorization');
 

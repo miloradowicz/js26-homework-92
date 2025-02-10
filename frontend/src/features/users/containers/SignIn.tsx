@@ -4,10 +4,11 @@ import { Link as routerLink, useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { Box, Button, Container, Grid2 as Grid, Link, TextField, Typography } from '@mui/material';
 
-import { GenericError, TypedError } from '../../../types';
+import { TypedError } from '../../../types';
 import { useAppDispatch, useAppSelector } from '../../../app/hooks';
 import { selectError, selectLoading } from '../usersSlice';
 import { login } from '../usersThunk';
+import { isTypedError, hasError, hasMessage } from '@/utils/classifiers';
 
 interface FormData {
   username: string;
@@ -46,13 +47,11 @@ const SignIn = () => {
       await dispatch(login(data)).unwrap();
       navigate('/');
     } catch (e) {
-      if (!(e as TypedError).errors && (e as GenericError).error) {
-        enqueueSnackbar((e as GenericError).error, { variant: 'error' });
+      if (!isTypedError(e) && hasError(e)) {
+        enqueueSnackbar(e.error, { variant: 'error' });
       } else if (isAxiosError(e) && e.response?.data.error) {
         return void enqueueSnackbar(`${e.message}: ${e.response.data.error}`, { variant: 'error' });
-      } else if (e instanceof Error) {
-        return void enqueueSnackbar(e.message, { variant: 'error' });
-      } else if (((e): e is { message: string } => 'message' in (e as { message: string }))(e)) {
+      } else if (hasMessage(e)) {
         return void enqueueSnackbar(e.message, { variant: 'error' });
       }
 
