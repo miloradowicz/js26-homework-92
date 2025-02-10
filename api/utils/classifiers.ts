@@ -16,3 +16,6 @@ export const isCreateMessage = (
 
 export const isDeleteMessage = (m: Inbound): m is { type: 'DELETE_MESSAGE'; payload: string } =>
   m.type === 'DELETE_MESSAGE' && typeof m.payload === 'string';
+
+export const isAuthorization = (m: Inbound): m is { type: 'AUTHORIZATION'; payload: string } =>
+  m.type === 'AUTHORIZATION' && typeof m.payload === 'string';

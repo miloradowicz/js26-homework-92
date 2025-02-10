@@ -1,10 +1,11 @@
 import express from 'express';
 
-import { ConnectionCollection, GenericError, Inbound, Outbound } from '../types';
-import { RequestWithUser } from '../middleware/auth';
-import Message from '../models/Message';
-import { isCreateMessage, isDeleteMessage } from '../utils/classifiers';
+import { ConnectionCollection, GenericError, Inbound, Outbound, UserInfo } from '../types';
+import Message, { Fields as MessageFields } from '../models/Message';
+import { isAuthorization, isCreateMessage, isDeleteMessage } from '../utils/classifiers';
 import mongoose from 'mongoose';
+import User from '../models/User';
+import assert from 'assert';
 
 const connections: ConnectionCollection = {};
 
@@ -14,7 +15,7 @@ const notify = (msg: Outbound, targets?: { roles?: string[]; ids: mongoose.Types
   if (targets) {
     const _roles = targets.roles ?? ['moderator'];
     _connections = _connections.filter(
-      (x) => _roles.includes(x.user.role) || targets.ids.map((x) => String(x)).includes(x.id),
+      (x) => _roles.includes(x.user.role) || targets.ids.map((x) => String(x)).includes(String(x.user._id)),
     );
   }
 
@@ -26,64 +27,103 @@ const notify = (msg: Outbound, targets?: { roles?: string[]; ids: mongoose.Types
 const router = express.Router();
 
 export const mount = () => {
-  router.ws('/', async (ws, req) => {
-    const user = (req as RequestWithUser).user;
+  router.ws('/', async (ws) => {
+    let user: UserInfo | null = null;
 
-    if (!user) {
-      ws.send(
-        JSON.stringify({
-          type: 'UNAUTHENTICATED',
-          error: 'Only authenticated users are allowed',
-        } as GenericError),
-      );
-      return void ws.close();
-    }
-
-    let messages: ReturnType<typeof Message.hydrate>[];
-    if (user.role === 'member') {
-      messages = await Message.find({ $or: [{ sender: user._id }, { recepient: user._id }, { recepient: null }] });
-    } else if (user.role === 'moderator') {
-      messages = await Message.find({});
-    } else {
-      ws.send(
-        JSON.stringify({
-          type: 'UNAUTHORIZED',
-          error: 'Only members and moderators are allowed',
-        } as GenericError),
-      );
-      return void ws.close();
-    }
-
-    connections[String(user._id)] = { user, socket: ws };
-
-    ws.send(
-      JSON.stringify({
-        type: 'CONNECTION_ESTABLISHED',
-        payload: messages,
-      } as Outbound),
-    );
-
-    notify({ type: 'USER_CONNECTED', payload: String(user._id) } as Outbound);
-
-    ws.on('message', async (_msg) => {
+    ws.on('message', async (_inbound) => {
       try {
-        const msg = JSON.parse(_msg.toString()) as Inbound;
+        const inbound = JSON.parse(_inbound.toString()) as Inbound;
 
-        if (isCreateMessage(msg)) {
-          const message = await Message.create({
+        if (isAuthorization(inbound)) {
+          if (!inbound.payload) {
+            return void ws.close(
+              3000,
+              JSON.stringify({
+                type: 'UNAUTHENTICATED',
+                error: 'Authorization token is invalid',
+              } as GenericError),
+            );
+          }
+
+          const _user = await User.findOne({ token: inbound.payload }, { password: 0, token: 0 });
+
+          if (!_user) {
+            return void ws.close(
+              3000,
+              JSON.stringify({
+                type: 'UNAUTHENTICATED',
+                error: 'Authorization token is invalid',
+              } as GenericError),
+            );
+          }
+
+          user = _user;
+
+          let messages: (Omit<MessageFields, 'sender' | 'recepient'> & { sender: UserInfo; recepient?: UserInfo })[];
+          if (user.role === 'member') {
+            messages = await Message.find({
+              $or: [{ sender: user._id }, { recepient: user._id }, { recepient: null }],
+            })
+              .populate<{ sender: UserInfo }>('sender', { token: 0 })
+              .populate<{ recepient?: UserInfo }>('recepient', { token: 0 });
+          } else if (user.role === 'moderator') {
+            messages = await Message.find({})
+              .populate<{ sender: UserInfo }>('sender', { token: 0 })
+              .populate<{ recepient?: UserInfo }>('recepient', { token: 0 });
+          } else {
+            return void ws.close(
+              3000,
+              JSON.stringify({
+                type: 'UNAUTHORIZED',
+                error: 'Only members and moderators are allowed',
+              } as GenericError),
+            );
+          }
+          notify({
+            type: 'USER_CONNECTED',
+            payload: user,
+          } as Outbound);
+
+          connections[String(user._id)] = { user, socket: ws };
+          const users = Object.entries(connections).map(([_, { user }]) => user);
+          return void ws.send(
+            JSON.stringify({
+              type: 'CONNECTION_ESTABLISHED',
+              payload: { users: users, messages },
+            } as Outbound),
+          );
+        }
+
+        if (!user) {
+          return void ws.close(
+            3000,
+            JSON.stringify({
+              type: 'UNAUTHENTICATED',
+              error: 'Only authenticated users are allowed',
+            } as GenericError),
+          );
+        }
+
+        if (isCreateMessage(inbound)) {
+          const { _id } = await Message.create({
             sender: user._id,
-            recepient: msg.payload.recepient,
-            message: msg.payload.message,
+            recepient: inbound.payload.recepient,
+            message: inbound.payload.message,
           });
 
-          notify(
+          const message = await Message.findById(_id)
+            .populate<{ sender: UserInfo }>('sender', { password: 0, token: 0 })
+            .populate<{ recepient?: UserInfo }>('recepient', { password: 0, token: 0 });
+
+          assert(message);
+          return void notify(
             {
               type: 'MESSAGE_CREATED',
               payload: message,
             } as Outbound,
-            message.recepient ? { ids: [message.sender, message.recepient] } : undefined,
+            message.recepient ? { ids: [message.sender._id, message.recepient._id] } : undefined,
           );
-        } else if (isDeleteMessage(msg)) {
+        } else if (isDeleteMessage(inbound)) {
           if (user.role !== 'moderator')
             return void ws.send(
               JSON.stringify({
@@ -92,7 +132,7 @@ export const mount = () => {
               } as GenericError),
             );
 
-          const message = await Message.findByIdAndDelete(msg.payload);
+          const message = await Message.findByIdAndDelete(inbound.payload);
 
           if (!message) {
             return void ws.send(
@@ -103,12 +143,19 @@ export const mount = () => {
             );
           }
 
-          notify(
+          return void notify(
             {
               type: 'MESSAGE_DELETED',
               payload: String(message._id),
             } as Outbound,
             message.recepient ? { ids: [message.sender, message.recepient] } : undefined,
+          );
+        } else {
+          return void ws.send(
+            JSON.stringify({
+              type: 'SYNTAX_ERROR',
+              error: 'Request not recognized',
+            } as GenericError),
           );
         }
       } catch (e) {
@@ -133,12 +180,14 @@ export const mount = () => {
     });
 
     ws.on('close', async () => {
-      delete connections[String(user._id)];
+      if (user) {
+        delete connections[String(user._id)];
 
-      notify({
-        type: 'USER_DISCONNECTED',
-        payload: String(user._id),
-      } as Outbound);
+        notify({
+          type: 'USER_DISCONNECTED',
+          payload: String(user._id),
+        } as Outbound);
+      }
     });
   });
 };
