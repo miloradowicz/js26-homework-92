@@ -10,18 +10,25 @@ interface Props {
 const MessageForm: FC<Props> = ({ onSend }) => {
   const [message, setMessage] = useState<string>('');
   const [error, setError] = useState<string | null>();
+  const [sending, setSending] = useState(false);
 
   const handleChange: ChangeEventHandler<HTMLInputElement> = (e) => {
     setError(null);
     setMessage(e.target.value);
   };
 
-  const handleSend = () => {
-    if (!message) {
-      return void setError('Message cannot be empty');
-    }
+  const handleSend = async () => {
+    try {
+      setSending(true);
 
-    onSend(message);
+      if (!message) {
+        return void setError('Message cannot be empty');
+      }
+
+      await onSend(message);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -38,7 +45,7 @@ const MessageForm: FC<Props> = ({ onSend }) => {
             input: {
               endAdornment: (
                 <InputAdornment position='end'>
-                  <IconButton onClick={handleSend} disabled={!!error}>
+                  <IconButton onClick={handleSend} disabled={!!error} loading={sending}>
                     <Send />
                   </IconButton>
                 </InputAdornment>

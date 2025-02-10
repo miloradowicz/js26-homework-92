@@ -16,12 +16,14 @@ import {
 } from '@/utils/classifiers';
 import { useAppSelector } from '@/app/hooks';
 import { selectUser } from '@/features/users/usersSlice';
+import Loader from '@/components/UI/Loader/Loader';
 
 const Chat = () => {
   const user = useAppSelector(selectUser);
 
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [messages, setMessages] = useState<PopulatedMessage[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const ws = useRef<WebSocket | null>(null);
 
@@ -47,6 +49,7 @@ const Chat = () => {
         if (isConnectionEstablished(inbound)) {
           setUsers(inbound.payload.users);
           setMessages(inbound.payload.messages);
+          setLoading(false);
         } else if (isMessageCreated(inbound)) {
           setMessages((messages) => [...messages, inbound.payload]);
         } else if (isMessageDeleted(inbound)) {
@@ -92,22 +95,31 @@ const Chat = () => {
     }
   };
 
+  const handleItemDelete = async (id: string) => {
+    if (ws.current) {
+      ws.current.send(JSON.stringify({ type: 'DELETE_MESSAGE', payload: id } as Outbound));
+    }
+  };
+
   return (
-    <Grid container spacing={1}>
-      <Grid size={{ sm: 12, md: 4 }}>
-        <UserList users={users} />
-      </Grid>
-      <Grid size={{ sm: 12, md: 8 }}>
-        <Grid container direction='column' spacing={1}>
-          <Grid>
-            <MessageList messages={messages} />
-          </Grid>
-          <Grid>
-            <MessageForm onSend={handleSend} />
+    <>
+      <Loader open={loading} />
+      <Grid container spacing={1}>
+        <Grid size={{ sm: 12, md: 4 }}>
+          <UserList users={users} />
+        </Grid>
+        <Grid size={{ sm: 12, md: 8 }}>
+          <Grid container direction='column' spacing={1}>
+            <Grid>
+              <MessageList messages={messages} onItemDelete={handleItemDelete} />
+            </Grid>
+            <Grid>
+              <MessageForm onSend={handleSend} />
+            </Grid>
           </Grid>
         </Grid>
       </Grid>
-    </Grid>
+    </>
   );
 };
 
