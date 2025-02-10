@@ -20,6 +20,10 @@ const slice = createSlice({
   name: 'users',
   initialState,
   reducers: {
+    clearUser: (state) => {
+      state.user = null;
+      state.error = null;
+    },
     clearError: (state, { payload }: PayloadAction<string>) => {
       const _error = state.error as TypedError;
       if (_error?.errors[payload]) {
@@ -67,7 +71,7 @@ const slice = createSlice({
 });
 
 export const users = slice.reducer;
-export const { clearError } = slice.actions;
+export const { clearUser, clearError } = slice.actions;
 
 export const selectUser = (state: RootState) => state.users.user;
 export const selectLoading = (state: RootState) => state.users.loading;

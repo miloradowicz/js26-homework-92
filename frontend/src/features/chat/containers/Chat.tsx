@@ -4,7 +4,7 @@ import MessageList from '../components/MessageList';
 import MessageForm from '../components/MessageForm';
 import { Outbound, PopulatedMessage, UserInfo } from '@/types';
 import { wsURL } from '@/constants';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSnackbar } from 'notistack';
 import {
   isConnectionEstablished,
@@ -14,12 +14,13 @@ import {
   isUserConnected,
   isUserDisconnected,
 } from '@/utils/classifiers';
-import { useAppSelector } from '@/app/hooks';
-import { selectUser } from '@/features/users/usersSlice';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { clearUser, selectUser } from '@/features/users/usersSlice';
 import Loader from '@/components/UI/Loader/Loader';
 import { grey } from '@mui/material/colors';
 
 const Chat = () => {
+  const dispatch = useAppDispatch();
   const user = useAppSelector(selectUser);
 
   const [users, setUsers] = useState<UserInfo[]>([]);
@@ -27,18 +28,18 @@ const Chat = () => {
   const [loading, setLoading] = useState(false);
   const [recepient, setRecepient] = useState<UserInfo | null>(null);
 
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const ws = useRef<WebSocket | null>(null);
 
   const { enqueueSnackbar } = useSnackbar();
 
   const connect = useCallback(() => {
-    const ws = new WebSocket(wsURL);
+    ws.current = new WebSocket(wsURL);
 
-    ws.onopen = function () {
+    ws.current.onopen = function () {
       this.send(JSON.stringify({ type: 'AUTHORIZATION', payload: user?.token } as Outbound));
     };
 
-    ws.onmessage = (e) => {
+    ws.current.onmessage = (e) => {
       try {
         const inbound = JSON.parse(e.data);
 
@@ -71,50 +72,47 @@ const Chat = () => {
       }
     };
 
-    ws.onclose = (e) => {
-      if (e.code === 1002 || e.code === 1006 || e.code === 1008) {
+    ws.current.onclose = (e) => {
+      if (e.code === 3000) {
+        dispatch(clearUser());
+      } else if (e.code === 1002 || e.code === 1006 || e.code === 1008) {
         setLoading(true);
         enqueueSnackbar('Подключение прервано, переподключаем...', { variant: 'error' });
 
         setTimeout(connect, 5000);
       }
     };
-
-    setWs(ws);
-  }, [enqueueSnackbar, user]);
+  }, [enqueueSnackbar, user, dispatch]);
 
   useEffect(() => {
     connect();
 
     return () => {
-      if (ws) {
-        ws.close();
+      if (ws.current) {
+        ws.current.close();
       }
     };
-  }, [connect, ws]);
+  }, [connect]);
 
   const handleSend = useCallback(
     async (message: string) => {
-      if (ws) {
-        ws.send(
+      if (ws.current) {
+        ws.current.send(
           JSON.stringify({
             type: 'CREATE_MESSAGE',
-            payload: { recepient: recepient?._id ?? null, message },
+            payload: { message, ...(recepient ? { recepient: recepient._id } : {}) },
           } as Outbound),
         );
       }
     },
-    [ws, recepient],
+    [recepient],
   );
 
-  const handleItemDelete = useCallback(
-    async (id: string) => {
-      if (ws) {
-        ws.send(JSON.stringify({ type: 'DELETE_MESSAGE', payload: id } as Outbound));
-      }
-    },
-    [ws],
-  );
+  const handleItemDelete = useCallback(async (id: string) => {
+    if (ws.current) {
+      ws.current.send(JSON.stringify({ type: 'DELETE_MESSAGE', payload: id } as Outbound));
+    }
+  }, []);
 
   const handleItemClick = useCallback(
     async (u: UserInfo) => {
