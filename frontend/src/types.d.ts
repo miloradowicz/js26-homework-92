@@ -1,4 +1,5 @@
 export interface GenericError {
+  type: 'SYNTAX_ERROR' | 'UNAUTHENTICATED' | 'UNAUTHORIZED' | 'NOT_FOUND' | 'SERVER_ERROR';
   error: string;
 }
 
@@ -15,28 +16,22 @@ export interface User {
   username: string;
   displayName: string;
   avatarUrl: string | null;
-  role: 'user' | 'moderator';
+  role: 'member' | 'moderator';
   token: string;
 }
 
-export interface Session {
-  message: string;
-  user: User | null;
-}
+export type UserInfo = Omit<User, 'token'>;
 
-export interface SignInMutation {
-  username: string;
+export type SignInMutation = Omit<User, '_id' | 'displayName' | 'avatarUrl' | 'role' | 'token'> & {
   password: string;
-}
+};
 
-export interface SignUpMutation {
-  username: string;
+export type SignUpMutation = Omit<User, '_id' | 'avatarUrl' | 'role' | 'token'> & {
   password: string;
-  displayName: string;
   avatar: File | null;
-}
+};
 
-interface Message {
+export interface Message {
   _id: string;
   sender: string;
   recepient?: string;
@@ -44,13 +39,22 @@ interface Message {
 }
 
 type MessageMutation = Omit<Message, '_id' | 'sender'>;
+type PopulatedMessage = Omit<Message, 'sender' | 'recepient'> & {
+  sender: UserInfo;
+  recepient?: UserInfo;
+};
+
+export interface Session {
+  message: string;
+  user: User | null;
+}
 
 interface Inbound {
-  type: 'MESSAGE_CREATED' | 'MESSAGE_DELETED' | 'USER_CONNECTED' | 'USER_DISCONNECTED';
-  payload: Message | string;
+  type: 'CONNECTION_ESTABLISHED' | 'MESSAGE_CREATED' | 'MESSAGE_DELETED' | 'USER_CONNECTED' | 'USER_DISCONNECTED';
+  payload: { users: UserInfo[]; messages: PopulatedMessage[] } | PopulatedMessage | UserInfo | string;
 }
 
 interface Outbound {
-  type: 'INITIATE_CONNECTION' | 'CREATE_MESSAGE' | 'DELETE_MESSAGE';
+  type: 'CREATE_MESSAGE' | 'DELETE_MESSAGE' | 'AUTHORIZATION';
   payload: MessageMutation | string;
 }
